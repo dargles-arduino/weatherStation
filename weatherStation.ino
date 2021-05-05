@@ -8,18 +8,25 @@
  *   libraries. 
  *   I think this should work with ESP8266s in general; I'm using a bare 
  *   ESP12F to try and get sleep current down as low as possible.
- *   Now updated to use our new BT HomeHub
+ *   Note:
+ *     I've updated this so that it uses info.h to define SSID and PASSWORD, but not show it
+ *     on GitHUb ;) So, if you're downloading this from GitHub, you need to add an info.h with - 
+ *       #define LOCAL_SSID <your ssid>
+ *       #define LOCAL_PWD <your password>
+ *     Or if you prefer, you could just include these two lines below and remove the #include "info.h"...
+ *     
  * @author: David Argles, d.argles@gmx.com
  */
 
 /* Program identification */ 
 #define PROG    "weatherWebClient"
-#define VER     "5.03"
-#define BUILD   "03may2021 @17:42h"
+#define VER     "5.04"
+#define BUILD   "05may2021 @18:05h"
 
 /* Necessary includes */
 #include "flashscreen.h"
 #include "rtcMemory.h"
+#include "info.h"       // Allows definition of SSID and password without it showing on GitHub ;)
 /* These includes are for the BME280 sensor */
 #include <Wire.h>
 #include <BMx280I2C.h>
@@ -29,40 +36,40 @@
 #include <ESP8266HTTPClient.h>
 
 /* Global "defines" - some may have to look like variables because of type */
-#define LOCAL_SSID  "whatever"
-#define LOCAL_PWD   "key"
 #define ADC_0       A0
 #define CUTOFF      492     // 6V0 = 738, so target 4V -> 492
 #define I2C_ADDRESS 0x76    // Defines the expected I2C address for the sensor
-#define CHANNEL     "test"  // use "bat" for normal use, anything else for testing
+#define CHANNEL     "bat"  // use "bat" for normal use, anything else for testing
 
 /* ----- Initialisation ------------------------------------------------- */
 
 /* Global stuff that must happen outside setup() */
-rtcMemory         store;  // Creates an RTC memory object
+rtcMemory         store;                // Creates an RTC memory object
 BMx280I2C         bmx280(I2C_ADDRESS);  // Creates a BMx280I2C object using I2C
-ESP8266WiFiMulti  WiFiMulti; // Creates a WiFiMulti object
-int error         = 0;    // Reports any errors that occur during run
+ESP8266WiFiMulti  WiFiMulti;            // Creates a WiFiMulti object
+int error         = 0;                  // Reports any errors that occur during run
+int pin           = LED_BUILTIN;        // Allows us to us alternative pins to LED_BUILTIN
 
 void setup() {
   // initialise objects
   flashscreen flash;
   
   // declare variables
-  long int  baudrate  = 115200;   // Baudrate for serial output
-  int       serialNo;             // Maintains a count of runs through deep sleep
-  int       prevError = 0;        // error code for the previous run
-  boolean   batteryOK = false;    // Checks whether our battery has sufficient charge
-  uint64_t  deepSleepTime = 5e6;  //3600e6; // Deep sleep delay (millionths of sec)
-  bool BMElive = false;           // records whether BME280 initialised properly
-  int   adc  = 0;
-  float temp = 0;
-  float pres = 0;
-  float hum  = 0;
-  String  readings = "";          // For the parameter string in the http upload
-  boolean successful = false;     // If we fail, let's record the value and try next time
-  String urlRequest;              // String for contacting server
-  pinMode(LED_BUILTIN, OUTPUT);   // Only use LED_BUILTIN in case of error; but initialise it now
+  long int  baudrate  = 115200;     // Baudrate for serial output
+  int       serialNo;               // Maintains a count of runs through deep sleep
+  int       prevError = 0;          // error code for the previous run
+  boolean   batteryOK = false;      // Checks whether our battery has sufficient charge
+  uint64_t  deepSleepTime = 5e6; // 3600e6; // Deep sleep delay (millionths of sec)
+  bool      BMElive = false;        // records whether BME280 initialised properly
+  int       adc  = 0;
+  float     temp = 0;
+  float     pres = 0;
+  float     hum  = 0;
+  String    readings = "";          // For the parameter string in the http upload
+  boolean   successful = false;     // If we fail, let's record the value and try next time
+  String    urlRequest;             // String for contacting server
+  pinMode(pin, OUTPUT);             // Only use pin (LED) in case of error; but initialise it now
+  digitalWrite(pin, LOW);           // Turn off pin; it seems to come on by default
 
   // Start up the serial output port
   Serial.begin(baudrate);
@@ -70,7 +77,7 @@ void setup() {
 
   // Send program details to serial output
   flash.message(PROG, VER, BUILD);
-
+  
   // Initialise the RTC memory
   store.readData();
   // Remember the serial no for this set of readings
@@ -213,6 +220,7 @@ void setup() {
     Serial.print("Error #");
     Serial.print(error);
     Serial.println(" occured");
+    blink(error);
   }
   // Save the error code
   store.setError(error);
@@ -223,6 +231,13 @@ void setup() {
   Serial.println("Going to sleep...");
   // Whether successful or not, we're going to sleep for an hour before trying again!
   ESP.deepSleep(deepSleepTime);  
+}
+
+void blink(int code){
+  for (int count=0;count<code;count++){
+    digitalWrite(pin, !digitalRead(pin));
+    delay(500);
+  }
 }
 
 void wifiConnect()

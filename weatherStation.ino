@@ -1,27 +1,29 @@
 /**
  * Program: weatherStation
  * Purpose:
- *   I have a sneaking suspicion that I've got so many competing libraries 
- *   in this program that this is causing instability at start-up. To check 
- *   this out, version 5 starts completely from scratch, rebuilding to see 
- *   if I can identify a problem point, especially in terms of included 
- *   libraries. 
- *   I think this should work with ESP8266s in general; I'm using a bare 
- *   ESP12F to try and get sleep current down as low as possible.
+ *   This code sets up a weather station. It wakes from deep sleep (to save power), then checks 
+ *   the battery. If the battery is struggling, it goes back to sleep for an hour and hopes the 
+ *   solar panel will charge the battery a bit more for next time. If the battery is OK, it 
+ *   takes readings from a BME280, connects to the local wireless, and submits the readins to a 
+ *   webserver presumed to be waiting for a connection. It then goes back to sleep for an hour.
+ *   I think this should work with ESP8266s in general; I'm using a bare ESP12F to try and get 
+ *   sleep current down as low as possible.
  *   Note:
  *     I've updated this so that it uses info.h to define SSID and PASSWORD, but not show it
- *     on GitHUb ;) So, if you're downloading this from GitHub, you need to add an info.h with - 
+ *     on GitHUb ;) So, if you're downloading this from GitHub, you need to add an info.h with: 
  *       #define LOCAL_SSID <your ssid>
  *       #define LOCAL_PWD <your password>
- *     Or if you prefer, you could just include these two lines below and remove the #include "info.h"...
+ *     Or if you prefer, you could just include these two lines in the code below and remove 
+ *     the #include "info.h"...
  *     
  * @author: David Argles, d.argles@gmx.com
  */
 
 /* Program identification */ 
 #define PROG    "weatherWebClient"
-#define VER     "5.04"
-#define BUILD   "05may2021 @18:05h"
+#define VER     "5.05"
+#define BUILD   "11may2021 @20:39h"
+#define URL     "http://192.168.1.76/"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -48,7 +50,7 @@ rtcMemory         store;                // Creates an RTC memory object
 BMx280I2C         bmx280(I2C_ADDRESS);  // Creates a BMx280I2C object using I2C
 ESP8266WiFiMulti  WiFiMulti;            // Creates a WiFiMulti object
 int error         = 0;                  // Reports any errors that occur during run
-int pin           = LED_BUILTIN;        // Allows us to us alternative pins to LED_BUILTIN
+int pin           = LED_BUILTIN;        // Allows us to use alternative pins to LED_BUILTIN
 
 void setup() {
   // initialise objects
@@ -175,16 +177,24 @@ void setup() {
 
     // Now start up the wifi and attempt to submit the data
     wifiConnect();
+    //Serial.print("Connecting to WiFi");
     // Check for WiFi connection 
     successful = false;
-    if ((WiFiMulti.run() == WL_CONNECTED)) 
+    // We may need to give the WiFi 4 - 6 secs to get going
+    //int countdown = 6;
+    //while((WiFiMulti.run() != WL_CONNECTED)&&countdown>0){
+    //  countdown--;
+    //  Serial.print(".");
+    //}
+    if(WiFiMulti.run() == WL_CONNECTED)
     {
+      Serial.println("WiFi connected");
       WiFiClient client;
       HTTPClient http; // Must be declared after WiFiClient for correct destruction order, because used by http.begin(client,...)
       //trace("\n[HTTP]", "");
 
       // Set up request url with reading parameter(s)
-      urlRequest = "http://argles.org.uk/homelog.php";
+      urlRequest = URL; //"http://argles.org.uk/homelog.php";
       urlRequest += readings;
       // trace("empty = ", String(adcStore.empty));   
       // Now make the request

@@ -22,8 +22,7 @@
 /* Program identification */ 
 #define PROG    "weatherWebClient"
 #define VER     "5.05"
-#define BUILD   "11may2021 @20:39h"
-#define URL     "http://192.168.1.76/"
+#define BUILD   "13may2021 @22:10h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -39,9 +38,11 @@
 
 /* Global "defines" - some may have to look like variables because of type */
 #define ADC_0       A0
-#define CUTOFF      492     // 6V0 = 738, so target 4V -> 492
+#define CUTOFF      400     // 6V0 = 738, so target 4V -> 492
 #define I2C_ADDRESS 0x76    // Defines the expected I2C address for the sensor
 #define CHANNEL     "bat"  // use "bat" for normal use, anything else for testing
+#define URL_D       "http://192.168.1.76/"              // Display URL
+#define URL_W       "http://192.168.1.66/homelog.php"  // Website URL
 
 /* ----- Initialisation ------------------------------------------------- */
 
@@ -61,7 +62,7 @@ void setup() {
   int       serialNo;               // Maintains a count of runs through deep sleep
   int       prevError = 0;          // error code for the previous run
   boolean   batteryOK = false;      // Checks whether our battery has sufficient charge
-  uint64_t  deepSleepTime = 5e6; // 3600e6; // Deep sleep delay (millionths of sec)
+  uint64_t  deepSleepTime = 3600e6; // 3600e6; // Deep sleep delay (millionths of sec)
   bool      BMElive = false;        // records whether BME280 initialised properly
   int       adc  = 0;
   float     temp = 0;
@@ -194,14 +195,19 @@ void setup() {
       //trace("\n[HTTP]", "");
 
       // Set up request url with reading parameter(s)
-      urlRequest = URL; //"http://argles.org.uk/homelog.php";
+      urlRequest = URL_D + readings; //"http://192.168.1.76";
+      http.begin(client, urlRequest);
+      int httpCode = http.GET();
+      http.end();
+
+      urlRequest = URL_W; //"http://argles.org.uk/homelog.php";
       urlRequest += readings;
       // trace("empty = ", String(adcStore.empty));   
       // Now make the request
       http.begin(client, urlRequest);
       // trace("Requesting: ", urlRequest);
       // start connection and send HTTP header
-      int httpCode = http.GET();
+      httpCode = http.GET();
       if (httpCode > 0) 
       {
         // HTTP header has been sent and Server response header has been handled

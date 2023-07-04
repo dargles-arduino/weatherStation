@@ -15,14 +15,19 @@
  *       #define LOCAL_PWD <your password>
  *     Or if you prefer, you could just include these two lines in the code below and remove 
  *     the #include "info.h"...
- *     
+  *    *18may2023: I've added in code to detect an AHT20. This means that one can use a BMP280 
+ *     together with an AHT20 to get temperature, pressure -and- humidity. The devices are 
+ *     connected in parallel, no issues.
+ *    *01jun2023: I've discovered the WiFi range extender, so have added the extender SSID.
+ *    *05jun2023: The channel should be set in hardware, not software, so this has been changed.
+*     
  * @author: David Argles, d.argles@gmx.com
  */
 
 /* Program identification */ 
 #define PROG    "weatherWebClient"
-#define VER     "5.05"
-#define BUILD   "13may2021 @22:10h"
+#define VER     "6.21"
+#define BUILD   "04jul2023 @19:52h"
 
 /* Necessary includes */
 #include "flashscreen.h"

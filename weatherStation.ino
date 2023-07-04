@@ -89,6 +89,8 @@ void setup() {
   String    urlRequest;             // String for contacting server
   pinMode(pin, OUTPUT);             // Only use pin (LED) in case of error; but initialise it now
   digitalWrite(pin, LOW);           // Turn off pin; it seems to come on by default
+  pinMode(config_lsb, INPUT_PULLUP);
+  pinMode(config_msb, INPUT_PULLUP);
 
   // Start up the serial output port
   Serial.begin(baudrate);
@@ -106,10 +108,7 @@ void setup() {
   Serial.println(serialNo);
 
   // Check the ADC to see what the battery voltage is
-  //Serial.println("Giving the ADC a chance to get going...");
-  //delay(1000);
   Serial.println("Checking battery...");
-  //batteryOK = checkBattery();
   batteryOK = false;
   adc = analogRead(ADC_0);
   Serial.print("ADC reading: ");

@@ -230,6 +230,18 @@ void setup() {
       // start connection and send HTTP header
       int httpCode = http.GET();
       
+      // If the www URL failed, try the direct IP address
+      if(httpCode != HTTP_CODE_OK)
+      {
+        Serial.println("URL request failed, trying IP address.");
+        // Set up request url with reading parameter(s)
+        urlRequest = URL_D + readings; //"http://192.168.1.76";
+        http.begin(client, urlRequest);
+        httpCode = http.GET();
+        http.end();        
+      }
+
+      
       if (httpCode > 0) 
       {
         // HTTP header has been sent and Server response header has been handled

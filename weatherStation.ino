@@ -60,9 +60,14 @@
 /* Global stuff that must happen outside setup() */
 rtcMemory         store;                // Creates an RTC memory object
 BMx280I2C         bmx280(I2C_ADDRESS);  // Creates a BMx280I2C object using I2C
+AHT20             aht20;                // Creates AHT20 sensor object
 ESP8266WiFiMulti  WiFiMulti;            // Creates a WiFiMulti object
 int error         = 0;                  // Reports any errors that occur during run
 int pin           = LED_BUILTIN;        // Allows us to use alternative pins to LED_BUILTIN
+int config_lsb    = D8;
+int config_msb    = D7;
+String channel    = "";
+String configValues[]   = {"test", "mx5", "in1", "bat"};
 
 void setup() {
   // initialise objects

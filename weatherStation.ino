@@ -36,6 +36,7 @@
 /* These includes are for the BME280 sensor */
 #include <Wire.h>
 #include <BMx280I2C.h>
+#include <AHT20.h>
 /* These are for the WiFi & webclient */
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -45,9 +46,14 @@
 #define ADC_0       A0
 #define CUTOFF      400     // 6V0 = 738, so target 4V -> 492
 #define I2C_ADDRESS 0x76    // Defines the expected I2C address for the sensor
-#define CHANNEL     "bat"  // use "bat" for normal use, anything else for testing
-#define URL_D       "http://192.168.1.76/"              // Display URL
-#define URL_W       "http://192.168.1.66/homelog.php"  // Website URL
+#define ERROR_LOWBAT          1
+#define ERROR_NO_BMx          2
+#define ERROR_NO_WIFI         4
+#define ERROR_NO_BMx_READING  8
+#define ERROR_NO_WEB_UPLOAD   16
+#define URL_W       "http://argles.org.uk/homelog.php" // "Website" URL <my primary url>
+#define URL_D       "http://192.168.0.31/homelog.php"  // "Display" URL <my secondary url>
+#define CHANNEL     "bat"  // Defines which sensor is reporting; use "bat" for outside, "in1" for inside, "mx5" for car, anything else for testing
 
 /* ----- Initialisation ------------------------------------------------- */
 

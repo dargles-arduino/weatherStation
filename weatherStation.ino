@@ -220,20 +220,16 @@ void setup() {
       HTTPClient http; // Must be declared after WiFiClient for correct destruction order, because used by http.begin(client,...)
       //trace("\n[HTTP]", "");
 
-      // Set up request url with reading parameter(s)
-      urlRequest = URL_D + readings; //"http://192.168.1.76";
-      http.begin(client, urlRequest);
-      int httpCode = http.GET();
-      http.end();
-
       urlRequest = URL_W; //"http://argles.org.uk/homelog.php";
       urlRequest += readings;
       // trace("empty = ", String(adcStore.empty));   
       // Now make the request
+      String message = "Requesting: " + urlRequest;
+      Serial.println(message);
       http.begin(client, urlRequest);
-      // trace("Requesting: ", urlRequest);
       // start connection and send HTTP header
-      httpCode = http.GET();
+      int httpCode = http.GET();
+      
       if (httpCode > 0) 
       {
         // HTTP header has been sent and Server response header has been handled

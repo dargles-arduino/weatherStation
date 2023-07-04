@@ -320,7 +320,7 @@ void wifiConnect()
     Serial.println(WiFi.localIP());
   }
   else{
-    error += 4; // error #4 means we couldn't connect to WiFi
+    error += ERROR_NO_WIFI; // error #4 means we couldn't connect to WiFi
     Serial.println("WiFi connection failed!");
   }
   return;

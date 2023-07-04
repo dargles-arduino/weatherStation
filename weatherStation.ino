@@ -118,7 +118,10 @@ void setup() {
   if(batteryOK){
     Serial.println("Battery OK");
 
-    // Get the BME sensor going
+    // Determine which channel we're using
+    channel = readChannel();
+
+   // Get the BME sensor going
     // Initialise the BME sensor
     Serial.println("Initialising sensor...");
     
@@ -317,4 +320,12 @@ void loop() {
   // If we get here, something's gone wrong! Let's flash a warning
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   delay(1000);
+}
+
+String readChannel(void)
+{
+  String value = "";
+  int configVal = digitalRead(config_lsb)+(2*digitalRead(config_msb));
+  value = configValues[configVal];
+  return (value);
 }

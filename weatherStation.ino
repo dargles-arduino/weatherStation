@@ -184,6 +184,17 @@ void setup() {
       }
     }
 
+    /* See if we have an AHT20 */
+    // We've already got Wire going => Wire.begin(); //Join I2C bus
+    //Check if the AHT20 will acknowledge
+    if (aht20.begin() == false) Serial.println("AHT20 not detected.");
+    else
+    {
+      Serial.println("AHT20 detected.");
+      temp = aht20.getTemperature();
+      hum = aht20.getHumidity();
+    }
+
     // Set up the parameter string for the web exchange
     int prevError = store.error();
     Serial.print("Previous error # was: ");

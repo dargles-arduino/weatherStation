@@ -250,7 +250,7 @@ void setup() {
         if (httpCode == HTTP_CODE_OK) 
         {
           // Serial.println(http.getString());  // Gets the actual page returned
-          //trace("Request successful", "");
+          Serial.println("Request successful");
           //trace("Connection closed", "");
           successful = true;
         }

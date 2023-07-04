@@ -8,25 +8,21 @@
  *   webserver presumed to be waiting for a connection. It then goes back to sleep for an hour.
  *   I think this should work with ESP8266s in general; I'm using a bare ESP12F to try and get 
  *   sleep current down as low as possible.
- *   Notes:
- *    *I've updated this so that it uses info.h to define SSID and PASSWORD, but not show it
+ *   Note:
+ *     I've updated this so that it uses info.h to define SSID and PASSWORD, but not show it
  *     on GitHUb ;) So, if you're downloading this from GitHub, you need to add an info.h with: 
  *       #define LOCAL_SSID <your ssid>
  *       #define LOCAL_PWD <your password>
  *     Or if you prefer, you could just include these two lines in the code below and remove 
  *     the #include "info.h"...
- *    *18may2023: I've added in code to detect an AHT20. This means that one can use a BMP280 
- *     together with an AHT20 to get temperature, pressure -and- humidity. The devices are 
- *     connected in parallel, no issues.
- *    *01jun2023: I've discovered the WiFi range extender, so have added the extender SSID.
- *    *05jun2023: The channel should be set in hardware, not software, so this has been changed.
+ *     
  * @author: David Argles, d.argles@gmx.com
  */
 
 /* Program identification */ 
 #define PROG    "weatherWebClient"
-#define VER     "6.21"
-#define BUILD   "04jul2023 @19:52h"
+#define VER     "5.05"
+#define BUILD   "13may2021 @22:10h"
 
 /* Necessary includes */
 #include "flashscreen.h"
@@ -35,7 +31,6 @@
 /* These includes are for the BME280 sensor */
 #include <Wire.h>
 #include <BMx280I2C.h>
-#include <AHT20.h>
 /* These are for the WiFi & webclient */
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
@@ -43,31 +38,20 @@
 
 /* Global "defines" - some may have to look like variables because of type */
 #define ADC_0       A0
-#define CUTOFF      300    // 369 // 6V0 = 738, so target 4V -> 492. For 18650, we want 3V -> 369
-#define I2C_ADDRESS           0x76   // Defines the expected I2C address (0x76) for the BMx280...
-#define ALT_I2C_ADDRESS       0x77   // - but is 0x77 on combined AHT20/BMP280
-#define ERROR_LOWBAT          1
-#define ERROR_NO_BMx          2
-#define ERROR_NO_WIFI         4
-#define ERROR_NO_BMx_READING  8
-#define ERROR_NO_WEB_UPLOAD   16
-#define URL_W       "http://argles.org.uk/homelog.php" // "Website" URL <my primary url>
-#define URL_D       "http://192.168.0.31/homelog.php"  // "Display" URL <my secondary url>
-#define CHANNEL     "bat"  // Defines which sensor is reporting; use "bat" for outside, "in1" for inside, "mx5" for car, anything else for testing
+#define CUTOFF      400     // 6V0 = 738, so target 4V -> 492
+#define I2C_ADDRESS 0x76    // Defines the expected I2C address for the sensor
+#define CHANNEL     "bat"  // use "bat" for normal use, anything else for testing
+#define URL_D       "http://192.168.1.76/"              // Display URL
+#define URL_W       "http://192.168.1.66/homelog.php"  // Website URL
 
 /* ----- Initialisation ------------------------------------------------- */
 
 /* Global stuff that must happen outside setup() */
 rtcMemory         store;                // Creates an RTC memory object
 BMx280I2C         bmx280(I2C_ADDRESS);  // Creates a BMx280I2C object using I2C
-AHT20             aht20;                // Creates AHT20 sensor object
 ESP8266WiFiMulti  WiFiMulti;            // Creates a WiFiMulti object
 int error         = 0;                  // Reports any errors that occur during run
 int pin           = LED_BUILTIN;        // Allows us to use alternative pins to LED_BUILTIN
-int config_lsb    = D8;
-int config_msb    = D7;
-String channel    = "";
-String configValues[]   = {"test", "mx5", "in1", "bat"};
 
 void setup() {
   // initialise objects
@@ -89,8 +73,6 @@ void setup() {
   String    urlRequest;             // String for contacting server
   pinMode(pin, OUTPUT);             // Only use pin (LED) in case of error; but initialise it now
   digitalWrite(pin, LOW);           // Turn off pin; it seems to come on by default
-  pinMode(config_lsb, INPUT_PULLUP);
-  pinMode(config_msb, INPUT_PULLUP);
 
   // Start up the serial output port
   Serial.begin(baudrate);
@@ -108,18 +90,18 @@ void setup() {
   Serial.println(serialNo);
 
   // Check the ADC to see what the battery voltage is
+  //Serial.println("Giving the ADC a chance to get going...");
+  //delay(1000);
   Serial.println("Checking battery...");
+  //batteryOK = checkBattery();
   batteryOK = false;
   adc = analogRead(ADC_0);
   Serial.print("ADC reading: ");
   Serial.println(adc);
-  if(adc<CUTOFF) error += ERROR_LOWBAT;
+  if(adc<=CUTOFF) error += 1;
   else batteryOK = true;
   if(batteryOK){
     Serial.println("Battery OK");
-
-    // Determine which channel we're using
-    channel = readChannel();
 
     // Get the BME sensor going
     // Initialise the BME sensor
@@ -128,7 +110,7 @@ void setup() {
     /* Now initialise the BME280 */
     Wire.begin();
     /* begin() checks the Interface, reads the sensor ID (to differentiate between 
-     BMP280 and BME280) and reads compensation parameters.*/\
+     BMP280 and BME280) and reads compensation parameters.*/
     int attempts = 5;
     while(!bmx280.begin() && (attempts>0))
     {
@@ -144,7 +126,7 @@ void setup() {
       temp = -1;
       pres = -1;
       hum  = -1;
-      error += ERROR_NO_BMx; // error #2 means we failed to connect to the weather sensor 
+      error += 2; // error #2 means we failed to connect to the weather sensor 
     }
     else
     {
@@ -169,7 +151,7 @@ void setup() {
       //start a measurement
       if (!bmx280.measure()){
         Serial.println("could not start measurement, is a measurement already running?");
-        error += ERROR_NO_BMx_READING; // Error #8 means although the sensor initialised, we couldn't get a reading
+        error += 8; // Error #8 means although the sensor initialised, we couldn't get a reading
       }
       else
       {
@@ -184,63 +166,48 @@ void setup() {
       }
     }
 
-    /* See if we have an AHT20 */
-    // We've already got Wire going => Wire.begin(); //Join I2C bus
-    //Check if the AHT20 will acknowledge
-    if (aht20.begin() == false) Serial.println("AHT20 not detected.");
-    else
-    {
-      Serial.println("AHT20 detected.");
-      temp = aht20.getTemperature();
-      hum = aht20.getHumidity();
-    }
-
     // Set up the parameter string for the web exchange
     int prevError = store.error();
     Serial.print("Previous error # was: ");
     Serial.println(prevError);
-    readings = "?"+String(channel)+"="+String(adc)+"&serialNo="+String(serialNo)+"&temp="+String(temp)+"&pres="+String(pres)+"&hum="+String(hum)+"&error="+String(store.error());
+    readings = "?"+String(CHANNEL)+"="+String(adc)+"&serialNo="+String(serialNo)+"&temp="+String(temp)+"&pres="+String(pres)+"&hum="+String(hum)+"&error="+String(store.error());
     Serial.print("Param String is: ");
     Serial.println(readings);
     Serial.print("Current error is: ");
     Serial.println(error);
 
-    // Register WiFi extender
-    WiFiMulti.addAP(SSID_2, PWD_2);
     // Now start up the wifi and attempt to submit the data
     wifiConnect();
     //Serial.print("Connecting to WiFi");
     // Check for WiFi connection 
     successful = false;
+    // We may need to give the WiFi 4 - 6 secs to get going
+    //int countdown = 6;
+    //while((WiFiMulti.run() != WL_CONNECTED)&&countdown>0){
+    //  countdown--;
+    //  Serial.print(".");
+    //}
     if(WiFiMulti.run() == WL_CONNECTED)
     {
-      Serial.print("WiFi connected: ");
-      Serial.println(WiFi.SSID());
+      Serial.println("WiFi connected");
       WiFiClient client;
       HTTPClient http; // Must be declared after WiFiClient for correct destruction order, because used by http.begin(client,...)
       //trace("\n[HTTP]", "");
+
+      // Set up request url with reading parameter(s)
+      urlRequest = URL_D + readings; //"http://192.168.1.76";
+      http.begin(client, urlRequest);
+      int httpCode = http.GET();
+      http.end();
 
       urlRequest = URL_W; //"http://argles.org.uk/homelog.php";
       urlRequest += readings;
       // trace("empty = ", String(adcStore.empty));   
       // Now make the request
-      String message = "Requesting: " + urlRequest;
-      Serial.println(message);
       http.begin(client, urlRequest);
+      // trace("Requesting: ", urlRequest);
       // start connection and send HTTP header
-      int httpCode = http.GET();
-      
-      // If the www URL failed, try the direct IP address
-      if(httpCode != HTTP_CODE_OK)
-      {
-        Serial.println("URL request failed, trying IP address.");
-        // Set up request url with reading parameter(s)
-        urlRequest = URL_D + readings; //"http://192.168.1.76";
-        http.begin(client, urlRequest);
-        httpCode = http.GET();
-        http.end();        
-      }
-      
+      httpCode = http.GET();
       if (httpCode > 0) 
       {
         // HTTP header has been sent and Server response header has been handled
@@ -249,14 +216,14 @@ void setup() {
         if (httpCode == HTTP_CODE_OK) 
         {
           // Serial.println(http.getString());  // Gets the actual page returned
-          Serial.println("Request successful");
+          //trace("Request successful", "");
           //trace("Connection closed", "");
           successful = true;
         }
       }
       // HTTP request failed 
       else{
-        error += ERROR_NO_WEB_UPLOAD;  // error #16 means the upload to the server failed
+        error += 16;  // error #16 means the upload to the server failed
         Serial.printf("Request failed, error: %s\n", http.errorToString(httpCode).c_str());
       }
       http.end();
@@ -319,7 +286,7 @@ void wifiConnect()
     Serial.println(WiFi.localIP());
   }
   else{
-    error += ERROR_NO_WIFI; // error #4 means we couldn't connect to WiFi
+    error += 4; // error #4 means we couldn't connect to WiFi
     Serial.println("WiFi connection failed!");
   }
   return;
@@ -335,12 +302,4 @@ void loop() {
   // If we get here, something's gone wrong! Let's flash a warning
   digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
   delay(1000);
-}
-
-String readChannel(void)
-{
-  String value = "";
-  int configVal = digitalRead(config_lsb)+(2*digitalRead(config_msb));
-  value = configValues[configVal];
-  return (value);
 }

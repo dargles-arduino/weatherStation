@@ -26,8 +26,8 @@
 
 /* Program identification */ 
 #define PROG    "weatherWebClient"
-#define VER     "6.21"
-#define BUILD   "04jul2023 @19:52h"
+#define VER     "6.22"
+#define BUILD   "04jul2023 @20:39h"
 
 /* Necessary includes */
 #include "flashscreen.h"

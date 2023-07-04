@@ -257,7 +257,7 @@ void setup() {
       }
       // HTTP request failed 
       else{
-        error += 16;  // error #16 means the upload to the server failed
+        error += ERROR_NO_WEB_UPLOAD;  // error #16 means the upload to the server failed
         Serial.printf("Request failed, error: %s\n", http.errorToString(httpCode).c_str());
       }
       http.end();

@@ -205,20 +205,17 @@ void setup() {
     Serial.print("Current error is: ");
     Serial.println(error);
 
+    // Register additional WiFi AP
+    WiFiMulti.addAP(SSID_2, PWD_2);
     // Now start up the wifi and attempt to submit the data
     wifiConnect();
     //Serial.print("Connecting to WiFi");
     // Check for WiFi connection 
     successful = false;
-    // We may need to give the WiFi 4 - 6 secs to get going
-    //int countdown = 6;
-    //while((WiFiMulti.run() != WL_CONNECTED)&&countdown>0){
-    //  countdown--;
-    //  Serial.print(".");
-    //}
     if(WiFiMulti.run() == WL_CONNECTED)
     {
       Serial.println("WiFi connected");
+      Serial.println(WiFi.SSID());
       WiFiClient client;
       HTTPClient http; // Must be declared after WiFiClient for correct destruction order, because used by http.begin(client,...)
       //trace("\n[HTTP]", "");

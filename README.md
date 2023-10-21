@@ -1,2 +1,2 @@
 # weatherStation
-Code for my ESP8266 weather station
+My weather station is solar-powered, and has turned into a project to see if I can get it to survive through the year. At the moment, it struggles to cope with December and January. There's a whole other story about the electronics (using a bare ESP8266 to reduce deep sleep current to microamps and an MPPT controller to manage the charging of the solar panel), but that story belongs elsewhere.
